@@ -1,0 +1,17 @@
+{
+  "name": "panel-figure-maker",
+  "version": "1.0.0",
+  "description": "Professional figure composition tool for researchers",
+  "license": "MIT",
+  "author": "Your Name",
+  "keywords": [
+    "panel figure",
+    "scientific visualization",
+    "svg editor",
+    "figure layout"
+  ],
+  "scripts": {
+    "start": "npx http-server",
+    "dev": "npx http-server -p 8080"
+  }
+}

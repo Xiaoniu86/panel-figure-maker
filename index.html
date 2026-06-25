@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Figure Maker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .container { width: 100%; height: 100vh; display: flex; flex-direction: column; }
+
+        .header {
+            background: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header h1 { font-size: 20px; margin-bottom: 5px; }
+        .header p { color: #666; font-size: 12px; }
+
+        .main { flex: 1; display: grid; grid-template-columns: 280px 1fr 1fr; gap: 0; overflow: hidden; }
+
+        .panel {
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .panel:last-child { border-right: none; }
+        .panel h2 { font-size: 14px; margin-bottom: 12px; color: #222; font-weight: 600; }
+
+        .upload-area {
+            border: 2px dashed #bbb;
+            border-radius: 6px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+            margin-bottom: 12px;
+        }
+
+        .upload-area:hover { border-color: #0066cc; background: #f0f7ff; }
+        .upload-area.drag-over { border-color: #0066cc; background: #e6f2ff; }
+        .upload-area input[type="file"] { display: none; }
+        .upload-area .icon { font-size: 20px; margin-bottom: 5px; }
+        .upload-area .text { color: #333; font-size: 12px; font-weight: 500; }
+        .upload-area .hint { color: #888; font-size: 11px; margin-top: 5px; }
+
+        .info-badge {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-bottom: 10px;
+        }
+
+        .figure-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .figure-item {
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            aspect-ratio: 1;
+            overflow: hidden;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .figure-item:hover { border-color: #0066cc; box-shadow: 0 2px 6px rgba(0,102,204,0.1); }
+        .figure-label-thumb { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.8); color: white; padding: 2px 4px; border-radius: 2px; font-size: 9px; font-weight: bold; z-index: 10; }
+        .figure-preview { width: 100%; height: 100%; object-fit: contain; background: #f9f9f9; }
+
+        .controls { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600; color: #333; }
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 5px 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 11px;
+            font-family: inherit;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0,102,204,0.1);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .button-group button {
+            padding: 6px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: #0066cc; color: white; }
+        .btn-primary:hover { background: #0052a3; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+
+        .export-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .export-buttons button {
+            padding: 6px 6px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+            background: #0066cc;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .export-buttons button:hover { background: #0052a3; }
+        .export-buttons button:disabled { background: #ccc; cursor: not-allowed; }
+
+        .history-panel {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+
+        .history-item {
+            font-size: 10px;
+            padding: 4px;
+            margin: 2px 0;
+            background: #f9f9f9;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover { background: #e6f2ff; color: #0066cc; }
+        .history-item.current { background: #0066cc; color: white; font-weight: bold; }
+
+        .edit-area {
+            border: 1px solid #ddd;
+            background: #fafafa;
+            overflow: auto;
+            padding: 15px;
+            height: calc(100vh - 200px);
+        }
+
+        .edit-canvas {
+            display: block;
+            background: white;
+            cursor: move;
+            border: 1px solid #ddd;
+            margin: 0 auto;
+        }
+
+        .preview-area {
+            border: 1px solid #ddd;
+            background: #fafafa;
+            overflow: auto;
+            padding: 15px;
+            height: calc(100vh - 200px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .preview-canvas { max-width: 100%; border: 1px solid #ddd; background: white; }
+        .empty-state { color: #aaa; text-align: center; font-size: 12px; width: 100%; }
+
+        .hint-text {
+            font-size: 10px;
+            color: #888;
+            margin-top: 8px;
+            padding: 6px;
+            background: #f9f9f9;
+            border-radius: 3px;
+            line-height: 1.3;
+        }
+
+        .shortcut-help {
+            font-size: 10px;
+            color: #888;
+            margin-top: 8px;
+            padding: 6px;
+            background: #f0f7ff;
+            border-radius: 3px;
+            border-left: 2px solid #0066cc;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 { margin-bottom: 15px; font-size: 16px; }
+        .modal-content textarea {
+            width: 100%;
+            height: 150px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            margin: 10px 0;
+            resize: vertical;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            font-size: 11px;
+            cursor: pointer;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Panel Figure Maker</h1>
+            <p>Professional figure composition tool for researchers</p>
+        </div>
+
+        <div class="main">
+            <!-- Left: Control Panel -->
+            <div class="panel">
+                <h2>📁 Upload & Manage</h2>
+
+                <div class="upload-area" id="uploadArea">
+                    <div class="icon">📤</div>
+                    <div class="text">Click or drag</div>
+                    <div class="hint">Upload SVG files</div>
+                    <input type="file" id="fileInput" multiple accept=".svg,image/svg+xml" />
+                </div>
+
+                <div id="figureCount" class="info-badge">0 figures</div>
+                <div class="figure-list" id="figureList"></div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Alignment Mode</label>
+                        <select id="alignMode">
+                            <option value="top">Top Aligned</option>
+                            <option value="bottom">Bottom Aligned</option>
+                            <option value="center">Center Aligned</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Layout Mode</label>
+                        <select id="layoutMode">
+                            <option value="auto">Auto Wrap</option>
+                            <option value="row">Force Row</option>
+                            <option value="col">Force Column</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Cols Per Row</label>
+                        <input type="number" id="colsPerRow" value="2" min="1" max="10" />
+                    </div>
+
+                    <div class="control-group">
+                        <label>Spacing (px)</label>
+                        <input type="number" id="spacing" value="20" min="0" max="50" />
+                    </div>
+
+                    <div class="control-group">
+                        <label>Label Format</label>
+                        <select id="labelFormat">
+                            <option value="letter-dot">A. B. C.</option>
+                            <option value="letter">A B C</option>
+                            <option value="number">1 2 3</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Label Size (px)</label>
+                        <input type="number" id="labelSize" value="16" min="8" max="32" />
+                    </div>
+
+                    <div class="control-group">
+                        <label>Label Position</label>
+                        <select id="labelPosition">
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                            <option value="top">Top</option>
+                            <option value="bottom">Bottom</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Label Distance (px)</label>
+                        <input type="number" id="labelDistance" value="35" min="0" max="80" />
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showGrid" />
+                        <label for="showGrid">Show Grid</label>
+                    </div>
+
+                    <div class="history-panel" id="historyPanel" style="display:none;">
+                        <strong style="font-size: 10px;">History</strong>
+                        <div id="historyList"></div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-secondary" id="undoBtn" title="Ctrl+Z">↶ Undo</button>
+                        <button class="btn-secondary" id="redoBtn" title="Ctrl+Y">↷ Redo</button>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-secondary" id="resetLayoutBtn">🔄 Reset</button>
+                        <button class="btn-secondary" id="clearBtn">🗑️ Clear</button>
+                    </div>
+
+                    <div class="export-buttons">
+                        <button id="exportPDF" disabled title="Ctrl+P">PDF</button>
+                        <button id="exportSVG" disabled title="Ctrl+S">SVG</button>
+                        <button id="exportPNG" disabled>PNG</button>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-secondary" id="exportLayout">💾 Layout</button>
+                        <button class="btn-secondary" id="importLayout">📂 Import</button>
+                    </div>
+
+                    <div class="shortcut-help">
+                        <strong>⌨️ Shortcuts:</strong><br/>
+                        Ctrl+Z: Undo<br/>
+                        Ctrl+Y: Redo<br/>
+                        Ctrl+S: SVG<br/>
+                        Ctrl+P: PDF<br/>
+                        Del: Remove
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle: Edit Area -->
+            <div class="panel" style="padding: 0; flex: 1; border-right: 1px solid #ddd;">
+                <h2 style="padding: 12px 15px 0 15px; border-bottom: 1px solid #eee; margin-bottom: 0;">✏️ Editor</h2>
+                <div class="edit-area" id="editArea">
+                    <canvas id="editCanvas" class="edit-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Right: Preview Area -->
+            <div class="panel" style="padding: 0; flex: 1;">
+                <h2 style="padding: 12px 15px 0 15px; border-bottom: 1px solid #eee; margin-bottom: 0;">👁️ Preview</h2>
+                <div class="preview-area" id="previewArea">
+                    <div class="empty-state">Upload SVGs to start</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import/Export Modal -->
+    <div id="layoutModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Export Layout</h3>
+            <textarea id="layoutJson" placeholder="Layout JSON..."></textarea>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="document.getElementById('layoutModal').classList.remove('active')">Cancel</button>
+                <button class="btn-primary" id="confirmLayoutBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        class PanelFigureTool {
+            constructor() {
+                this.figures = [];
+                this.layout = [];
+                this.history = [];
+                this.historyIndex = -1;
+                this.dragging = null;
+                this.resizing = null;
+                this.lastSnappedY = null;
+                this.editCanvas = document.getElementById('editCanvas');
+                this.editCtx = this.editCanvas.getContext('2d');
+                this.gridSize = 20;
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.editCanvas.width = 600;
+                this.editCanvas.height = 500;
+                this.loadFromStorage();
+            }
+
+            setupEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                const clearBtn = document.getElementById('clearBtn');
+                const resetLayoutBtn = document.getElementById('resetLayoutBtn');
+                const exportPDF = document.getElementById('exportPDF');
+                const exportSVG = document.getElementById('exportSVG');
+                const exportPNG = document.getElementById('exportPNG');
+                const exportLayout = document.getElementById('exportLayout');
+                const importLayout = document.getElementById('importLayout');
+                const undoBtn = document.getElementById('undoBtn');
+                const redoBtn = document.getElementById('redoBtn');
+
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+                uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+                uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('drag-over'); this.handleFiles(e.dataTransfer.files); });
+                fileInput.addEventListener('change', e => this.handleFiles(e.target.files));
+
+                clearBtn.addEventListener('click', () => { if (confirm('Clear all figures?')) { this.figures = []; this.layout = []; this.saveState(); this.render(); } });
+                resetLayoutBtn.addEventListener('click', () => this.resetLayout());
+                exportPDF.addEventListener('click', () => this.exportAs('pdf'));
+                exportSVG.addEventListener('click', () => this.exportAs('svg'));
+                exportPNG.addEventListener('click', () => this.exportAs('png'));
+                exportLayout.addEventListener('click', () => this.showExportLayout());
+                importLayout.addEventListener('click', () => this.showImportLayout());
+                undoBtn.addEventListener('click', () => this.undo());
+                redoBtn.addEventListener('click', () => this.redo());
+
+                ['alignMode', 'layoutMode', 'colsPerRow', 'spacing', 'labelFormat', 'labelSize', 'labelPosition', 'labelDistance', 'showGrid'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => this.render());
+                });
+
+                this.editCanvas.addEventListener('mousedown', e => this.onCanvasMouseDown(e));
+                this.editCanvas.addEventListener('mousemove', e => this.onCanvasMouseMove(e));
+                this.editCanvas.addEventListener('mouseup', () => this.onCanvasMouseUp());
+                this.editCanvas.addEventListener('mouseleave', () => this.onCanvasMouseUp());
+
+                document.addEventListener('keydown', e => this.handleKeyboard(e));
+            }
+
+            handleKeyboard(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'z') { e.preventDefault(); this.undo(); }
+                    else if (e.key === 'y') { e.preventDefault(); this.redo(); }
+                    else if (e.key === 's') { e.preventDefault(); this.exportAs('svg'); }
+                    else if (e.key === 'p') { e.preventDefault(); this.exportAs('pdf'); }
+                } else if (e.key === 'Delete') {
+                    e.preventDefault();
+                    // Delete selected figure (optional)
+                }
+            }
+
+            saveState() {
+                // Save to history
+                this.historyIndex++;
+                this.history = this.history.slice(0, this.historyIndex);
+                this.history.push(JSON.stringify({ figures: this.figures, layout: this.layout }));
+                this.updateHistoryPanel();
+                this.saveToStorage();
+            }
+
+            undo() {
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    this.restoreState(this.historyIndex);
+                }
+            }
+
+            redo() {
+                if (this.historyIndex < this.history.length - 1) {
+                    this.historyIndex++;
+                    this.restoreState(this.historyIndex);
+                }
+            }
+
+            restoreState(index) {
+                const state = JSON.parse(this.history[index]);
+                this.figures = state.figures.map(f => ({ ...f, cachedImage: new Image() }));
+                this.layout = state.layout;
+                this.figures.forEach(f => { f.cachedImage.src = f.url; });
+                this.updateHistoryPanel();
+                this.render();
+            }
+
+            updateHistoryPanel() {
+                const panel = document.getElementById('historyPanel');
+                const list = document.getElementById('historyList');
+                if (this.history.length > 1) {
+                    panel.style.display = 'block';
+                    list.innerHTML = this.history.map((_, i) =>
+                        `<div class="history-item ${i === this.historyIndex ? 'current' : ''}" onclick="window.tool.restoreState(${i})">Step ${i + 1}</div>`
+                    ).join('');
+                }
+            }
+
+            saveToStorage() {
+                const data = {
+                    figures: this.figures.map(f => ({ url: f.url, origWidth: f.origWidth, origHeight: f.origHeight })),
+                    layout: this.layout,
+                    settings: {
+                        alignMode: document.getElementById('alignMode').value,
+                        layoutMode: document.getElementById('layoutMode').value,
+                        labelFormat: document.getElementById('labelFormat').value,
+                        labelSize: document.getElementById('labelSize').value,
+                        labelPosition: document.getElementById('labelPosition').value,
+                        labelDistance: document.getElementById('labelDistance').value,
+                        spacing: document.getElementById('spacing').value,
+                        colsPerRow: document.getElementById('colsPerRow').value
+                    }
+                };
+                localStorage.setItem('panelFigureMaker', JSON.stringify(data));
+            }
+
+            loadFromStorage() {
+                const data = localStorage.getItem('panelFigureMaker');
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.settings) {
+                            Object.entries(parsed.settings).forEach(([key, value]) => {
+                                const el = document.getElementById(key);
+                                if (el) el.value = value;
+                            });
+                        }
+                    } catch (e) {
+                        console.log('Could not load saved data');
+                    }
+                }
+            }
+
+            showExportLayout() {
+                const data = {
+                    figures: this.figures.map(f => ({ origWidth: f.origWidth, origHeight: f.origHeight })),
+                    layout: this.layout,
+                    settings: {
+                        alignMode: document.getElementById('alignMode').value,
+                        layoutMode: document.getElementById('layoutMode').value,
+                        labelFormat: document.getElementById('labelFormat').value,
+                        labelSize: document.getElementById('labelSize').value,
+                        labelPosition: document.getElementById('labelPosition').value,
+                        labelDistance: document.getElementById('labelDistance').value,
+                        spacing: document.getElementById('spacing').value,
+                        colsPerRow: document.getElementById('colsPerRow').value
+                    }
+                };
+                document.getElementById('modalTitle').textContent = 'Export Layout';
+                document.getElementById('layoutJson').value = JSON.stringify(data, null, 2);
+                document.getElementById('confirmLayoutBtn').textContent = 'Copy & Close';
+                document.getElementById('confirmLayoutBtn').onclick = () => {
+                    const textarea = document.getElementById('layoutJson');
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.getElementById('layoutModal').classList.remove('active');
+                    // Also download as JSON file
+                    const blob = new Blob([textarea.value], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `panel-layout-${new Date().getTime()}.json`;
+                    a.click();
+                };
+                document.getElementById('layoutModal').classList.add('active');
+            }
+
+            showImportLayout() {
+                document.getElementById('modalTitle').textContent = 'Import Layout';
+                document.getElementById('layoutJson').value = '';
+                document.getElementById('confirmLayoutBtn').textContent = 'Import';
+                document.getElementById('confirmLayoutBtn').onclick = () => {
+                    try {
+                        const data = JSON.parse(document.getElementById('layoutJson').value);
+                        this.layout = data.layout;
+                        Object.entries(data.settings).forEach(([key, value]) => {
+                            const el = document.getElementById(key);
+                            if (el) el.value = value;
+                        });
+                        this.saveToStorage();
+                        this.render();
+                        document.getElementById('layoutModal').classList.remove('active');
+                        alert('Layout imported successfully!');
+                    } catch (e) {
+                        alert('Invalid JSON format');
+                    }
+                };
+                document.getElementById('layoutModal').classList.add('active');
+            }
+
+            async handleFiles(files) {
+                for (let file of files) {
+                    if (file.type === 'image/svg+xml' || file.name.endsWith('.svg')) {
+                        const url = URL.createObjectURL(file);
+                        const dims = await this.getSVGDimensions(url);
+                        const index = this.figures.length;
+                        const img = new Image();
+                        img.src = url;
+                        this.figures.push({
+                            index,
+                            file,
+                            url,
+                            origWidth: dims.width,
+                            origHeight: dims.height,
+                            cachedImage: img
+                        });
+                    }
+                }
+                if (this.figures.length > 0) {
+                    this.resetLayout();
+                }
+            }
+
+            async getSVGDimensions(url) {
+                try {
+                    const response = await fetch(url);
+                    const text = await response.text();
+                    const parser = new DOMParser();
+                    const svg = parser.parseFromString(text, 'image/svg+xml').documentElement;
+                    const viewBox = svg.getAttribute('viewBox');
+                    if (viewBox) {
+                        const parts = viewBox.split(/\s+|,/);
+                        return { width: parseFloat(parts[2]), height: parseFloat(parts[3]) };
+                    }
+                    const width = parseFloat(svg.getAttribute('width')) || 200;
+                    const height = parseFloat(svg.getAttribute('height')) || 200;
+                    return { width, height };
+                } catch (e) {
+                    return { width: 200, height: 200 };
+                }
+            }
+
+            getLabel(origIndex) {
+                const format = document.getElementById('labelFormat').value;
+                if (format === 'number') return (origIndex + 1).toString();
+                else if (format === 'letter') return String.fromCharCode(65 + origIndex);
+                else return String.fromCharCode(65 + origIndex) + '.';
+            }
+
+            getLabelCoords(item, labelSize, labelDistance, labelPosition) {
+                const coords = { x: 0, y: 0 };
+                switch (labelPosition) {
+                    case 'left':
+                        coords.x = item.x - labelDistance;
+                        coords.y = item.y + labelSize / 2 + 5;
+                        break;
+                    case 'right':
+                        coords.x = item.x + item.width + labelDistance;
+                        coords.y = item.y + labelSize / 2 + 5;
+                        break;
+                    case 'top':
+                        coords.x = item.x + 5;
+                        coords.y = item.y - labelDistance;
+                        break;
+                    case 'bottom':
+                        coords.x = item.x + 5;
+                        coords.y = item.y + item.height + labelDistance + labelSize;
+                        break;
+                }
+                return coords;
+            }
+
+            resetLayout() {
+                const layoutMode = document.getElementById('layoutMode').value;
+                const spacing = parseInt(document.getElementById('spacing').value);
+                const alignMode = document.getElementById('alignMode').value;
+
+                this.layout = [];
+                const canvasWidth = 600;
+                const margin = 20;
+                let x = margin, y = margin;
+                let rowHeight = 0;
+                let rowItems = [];
+                const maxWidth = canvasWidth - margin * 2;
+
+                for (let fig of this.figures) {
+                    const ratio = fig.origWidth / fig.origHeight;
+                    let width, height;
+
+                    if (layoutMode === 'row') {
+                        width = (maxWidth - spacing * (this.figures.length - 1)) / this.figures.length;
+                        height = width / ratio;
+                    } else if (layoutMode === 'col') {
+                        height = 200;
+                        width = height * ratio;
+                    } else {
+                        if (ratio > 2) {
+                            width = maxWidth;
+                            height = width / ratio;
+                        } else if (ratio > 1.1) {
+                            width = (maxWidth - spacing) / 2;
+                            height = width / ratio;
+                        } else if (ratio > 0.7) {
+                            width = (maxWidth - spacing) / 2;
+                            height = width / ratio;
+                        } else {
+                            height = 250;
+                            width = height * ratio;
+                        }
+                    }
+
+                    if (layoutMode !== 'col' && x + width + margin > canvasWidth && x > margin) {
+                        this.applyRowAlignment(rowItems, rowHeight, alignMode);
+                        x = margin;
+                        y += rowHeight + spacing;
+                        rowHeight = 0;
+                        rowItems = [];
+                    }
+
+                    const item = {
+                        index: fig.index,
+                        x,
+                        y,
+                        width: Math.round(width),
+                        height: Math.round(height)
+                    };
+
+                    this.layout.push(item);
+                    rowItems.push(item);
+
+                    x += width + spacing;
+                    rowHeight = Math.max(rowHeight, height);
+                }
+
+                this.applyRowAlignment(rowItems, rowHeight, alignMode);
+
+                document.getElementById('figureCount').textContent = this.figures.length + ' figures';
+                document.getElementById('exportPDF').disabled = false;
+                document.getElementById('exportSVG').disabled = false;
+                document.getElementById('exportPNG').disabled = false;
+                this.saveState();
+                this.render();
+            }
+
+            applyRowAlignment(items, rowHeight, alignMode) {
+                if (alignMode === 'top') {
+                } else if (alignMode === 'bottom') {
+                    for (let item of items) item.y += rowHeight - item.height;
+                } else if (alignMode === 'center') {
+                    for (let item of items) item.y += (rowHeight - item.height) / 2;
+                }
+            }
+
+            calculateRows() {
+                const rows = [];
+                const tolerance = 25;
+                const sortedByY = [...this.layout].sort((a, b) => a.y - b.y);
+
+                for (let item of sortedByY) {
+                    let foundRow = false;
+                    for (let row of rows) {
+                        const rowAvgY = row.items.reduce((sum, i) => sum + i.y, 0) / row.items.length;
+                        if (Math.abs(item.y - rowAvgY) < tolerance) {
+                            row.items.push(item);
+                            foundRow = true;
+                            break;
+                        }
+                    }
+                    if (!foundRow) rows.push({ items: [item] });
+                }
+                return rows;
+            }
+
+            snapToNearestY(draggingItem) {
+                const tolerance = 50;
+                const deadzone = 25;
+                const otherYs = this.layout.filter(item => item !== draggingItem).map(item => item.y);
+
+                if (otherYs.length === 0) return;
+
+                if (this.lastSnappedY !== null) {
+                    const distFromSnapped = Math.abs(draggingItem.y - this.lastSnappedY);
+                    if (distFromSnapped > deadzone) {
+                        this.lastSnappedY = null;
+                    } else {
+                        draggingItem.y = this.lastSnappedY;
+                        return;
+                    }
+                }
+
+                let nearest = null;
+                let minDist = Infinity;
+
+                for (let y of otherYs) {
+                    const dist = Math.abs(draggingItem.y - y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = y;
+                    }
+                }
+
+                if (minDist < tolerance && nearest !== null) {
+                    draggingItem.y = nearest;
+                    this.lastSnappedY = nearest;
+                }
+            }
+
+            render() {
+                this.renderFigureList();
+                this.renderEditCanvas();
+                this.renderPreviewCanvas();
+            }
+
+            renderFigureList() {
+                const list = document.getElementById('figureList');
+                list.innerHTML = '';
+                this.figures.forEach((fig) => {
+                    const div = document.createElement('div');
+                    div.className = 'figure-item';
+                    div.style.position = 'relative';
+                    const label = this.getLabel(fig.index);
+                    div.innerHTML = `<div class="figure-label-thumb">${label}</div><img class="figure-preview" src="${fig.url}" alt="${label}">`;
+                    list.appendChild(div);
+                });
+            }
+
+            renderEditCanvas() {
+                const w = this.editCanvas.width;
+                const h = this.editCanvas.height;
+                this.editCtx.fillStyle = 'white';
+                this.editCtx.fillRect(0, 0, w, h);
+
+                // Draw grid if enabled
+                if (document.getElementById('showGrid').checked) {
+                    this.editCtx.strokeStyle = '#f0f0f0';
+                    this.editCtx.lineWidth = 0.5;
+                    for (let i = 0; i < w; i += this.gridSize) {
+                        this.editCtx.beginPath();
+                        this.editCtx.moveTo(i, 0);
+                        this.editCtx.lineTo(i, h);
+                        this.editCtx.stroke();
+                    }
+                    for (let i = 0; i < h; i += this.gridSize) {
+                        this.editCtx.beginPath();
+                        this.editCtx.moveTo(0, i);
+                        this.editCtx.lineTo(w, i);
+                        this.editCtx.stroke();
+                    }
+                }
+
+                this.editCtx.strokeStyle = '#e0e0e0';
+                this.editCtx.lineWidth = 1;
+                this.editCtx.strokeRect(0, 0, w, h);
+
+                for (let item of this.layout) {
+                    const fig = this.figures[item.index];
+                    this.drawFigureInEdit(fig, item);
+                }
+            }
+
+            drawFigureInEdit(fig, item) {
+                if (!fig.cachedImage || !fig.cachedImage.complete) return;
+
+                const img = fig.cachedImage;
+                this.editCtx.drawImage(img, item.x, item.y, item.width, item.height);
+
+                this.editCtx.strokeStyle = '#0066cc';
+                this.editCtx.lineWidth = 1.5;
+                this.editCtx.strokeRect(item.x, item.y, item.width, item.height);
+
+                this.editCtx.fillStyle = '#0066cc';
+                this.editCtx.fillRect(item.x + item.width - 8, item.y + item.height - 8, 8, 8);
+
+                const label = this.getLabel(fig.index);
+                const labelSize = parseInt(document.getElementById('labelSize').value);
+                const labelDistance = parseInt(document.getElementById('labelDistance').value);
+                const labelPosition = document.getElementById('labelPosition').value;
+
+                const coords = this.getLabelCoords(item, labelSize, labelDistance, labelPosition);
+                this.editCtx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                this.editCtx.font = `bold ${labelSize}px Arial`;
+                this.editCtx.fillText(label, coords.x, coords.y);
+            }
+
+            async renderPreviewCanvas() {
+                const previewArea = document.getElementById('previewArea');
+                if (this.layout.length === 0) {
+                    previewArea.innerHTML = '<div class="empty-state">Upload SVGs to start</div>';
+                    return;
+                }
+
+                let maxX = 0, maxY = 0;
+                for (let item of this.layout) {
+                    maxX = Math.max(maxX, item.x + item.width);
+                    maxY = Math.max(maxY, item.y + item.height);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(maxX + 20);
+                canvas.height = Math.round(maxY + 20);
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                for (let item of this.layout) {
+                    const fig = this.figures[item.index];
+                    await this.drawFigureInPreview(ctx, fig, item);
+                }
+
+                previewArea.innerHTML = '';
+                canvas.classList.add('preview-canvas');
+                previewArea.appendChild(canvas);
+            }
+
+            drawFigureInPreview(ctx, fig, item) {
+                return new Promise((resolve) => {
+                    if (!fig.cachedImage) {
+                        resolve();
+                        return;
+                    }
+
+                    const checkLoaded = () => {
+                        if (fig.cachedImage.complete) {
+                            const img = fig.cachedImage;
+                            ctx.drawImage(img, item.x, item.y, item.width, item.height);
+
+                            const label = this.getLabel(fig.index);
+                            const labelSize = parseInt(document.getElementById('labelSize').value);
+                            const labelDistance = parseInt(document.getElementById('labelDistance').value);
+                            const labelPosition = document.getElementById('labelPosition').value;
+
+                            const coords = this.getLabelCoords(item, labelSize, labelDistance, labelPosition);
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                            ctx.font = `bold ${labelSize}px Arial`;
+                            ctx.fillText(label, coords.x, coords.y);
+
+                            resolve();
+                        } else {
+                            setTimeout(checkLoaded, 50);
+                        }
+                    };
+                    checkLoaded();
+                });
+            }
+
+            onCanvasMouseDown(e) {
+                const rect = this.editCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                for (let item of this.layout) {
+                    if (x > item.x + item.width - 12 && x < item.x + item.width &&
+                        y > item.y + item.height - 12 && y < item.y + item.height) {
+                        this.resizing = { item, startX: x, startY: y };
+                        this.editCanvas.style.cursor = 'nwse-resize';
+                        return;
+                    }
+                }
+
+                for (let item of this.layout) {
+                    if (x > item.x && x < item.x + item.width &&
+                        y > item.y && y < item.y + item.height) {
+                        this.dragging = { item, startX: x, startY: y, offsetX: x - item.x, offsetY: y - item.y };
+                        this.editCanvas.style.cursor = 'grabbing';
+                        return;
+                    }
+                }
+            }
+
+            onCanvasMouseMove(e) {
+                const rect = this.editCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (this.dragging) {
+                    this.dragging.item.x = Math.max(0, x - this.dragging.offsetX);
+                    this.dragging.item.y = Math.max(0, y - this.dragging.offsetY);
+                    this.snapToNearestY(this.dragging.item);
+                    this.render();
+                } else if (this.resizing) {
+                    const fig = this.figures[this.resizing.item.index];
+                    const ratio = fig.origWidth / fig.origHeight;
+                    const dw = x - this.resizing.startX;
+                    this.resizing.item.width = Math.max(50, this.resizing.item.width + dw);
+                    this.resizing.item.height = this.resizing.item.width / ratio;
+                    this.resizing.startX = x;
+                    this.render();
+                } else {
+                    for (let item of this.layout) {
+                        if (x > item.x + item.width - 12 && x < item.x + item.width &&
+                            y > item.y + item.height - 12 && y < item.y + item.height) {
+                            this.editCanvas.style.cursor = 'nwse-resize';
+                            return;
+                        }
+                    }
+                    for (let item of this.layout) {
+                        if (x > item.x && x < item.x + item.width &&
+                            y > item.y && y < item.y + item.height) {
+                            this.editCanvas.style.cursor = 'grab';
+                            return;
+                        }
+                    }
+                    this.editCanvas.style.cursor = 'move';
+                }
+            }
+
+            onCanvasMouseUp() {
+                if (this.dragging || this.resizing) {
+                    this.saveState();
+                }
+                this.dragging = null;
+                this.resizing = null;
+                this.lastSnappedY = null;
+                this.editCanvas.style.cursor = 'move';
+            }
+
+            async exportAs(format) {
+                if (this.layout.length === 0) {
+                    alert('Please upload figures first');
+                    return;
+                }
+
+                let maxX = 0, maxY = 0;
+                for (let item of this.layout) {
+                    maxX = Math.max(maxX, item.x + item.width);
+                    maxY = Math.max(maxY, item.y + item.height);
+                }
+
+                const width = Math.round(maxX + 20);
+                const height = Math.round(maxY + 20);
+
+                if (format === 'pdf') {
+                    await this.exportPDF(width, height);
+                } else if (format === 'svg') {
+                    await this.exportSVG(width, height);
+                } else if (format === 'png') {
+                    await this.exportPNG(width, height);
+                }
+            }
+
+            async exportPDF(width, height) {
+                const dpi = 300;
+                const scale = dpi / 96;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(width * scale);
+                canvas.height = Math.round(height * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.scale(scale, scale);
+
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, width, height);
+
+                for (let item of this.layout) {
+                    const fig = this.figures[item.index];
+                    await this.drawFigureInPreview(ctx, fig, item);
+                }
+
+                const { jsPDF } = window.jspdf;
+                const imgData = canvas.toDataURL('image/png');
+                const pdfWidth = width / 3.78;
+                const pdfHeight = height / 3.78;
+
+                const pdf = new jsPDF({
+                    orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+                    unit: 'mm',
+                    format: [pdfWidth, pdfHeight]
+                });
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save(`panel-figure-${new Date().getTime()}.pdf`);
+            }
+
+            async exportPNG(width, height) {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, width, height);
+
+                for (let item of this.layout) {
+                    const fig = this.figures[item.index];
+                    await this.drawFigureInPreview(ctx, fig, item);
+                }
+
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `panel-figure-${new Date().getTime()}.png`;
+                link.click();
+            }
+
+            async exportSVG(width, height) {
+                const labelSize = parseInt(document.getElementById('labelSize').value);
+                const labelDistance = parseInt(document.getElementById('labelDistance').value);
+                const labelPosition = document.getElementById('labelPosition').value;
+
+                let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <defs>
+        <style>
+            text { font-family: Arial, sans-serif; font-weight: bold; }
+        </style>
+    </defs>
+    <rect width="${width}" height="${height}" fill="white"/>
+`;
+
+                for (let item of this.layout) {
+                    const fig = this.figures[item.index];
+                    const label = this.getLabel(fig.index);
+
+                    try {
+                        const response = await fetch(fig.url);
+                        const svgText = await response.text();
+                        const parser = new DOMParser();
+                        const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+                        const svgElement = svgDoc.documentElement;
+
+                        let svgContent_inner = '';
+                        for (let child of svgElement.childNodes) {
+                            if (child.nodeType === Node.ELEMENT_NODE) {
+                                svgContent_inner += new XMLSerializer().serializeToString(child);
+                            }
+                        }
+
+                        svgContent += `    <g transform="translate(${item.x}, ${item.y}) scale(${item.width / fig.origWidth}, ${item.height / fig.origHeight})">
+        ${svgContent_inner}
+    </g>
+`;
+
+                        const coords = this.getLabelCoords(item, labelSize, labelDistance, labelPosition);
+                        svgContent += `    <text x="${coords.x}" y="${coords.y}" font-size="${labelSize}" fill="rgba(0, 0, 0, 0.9)">${label}</text>
+`;
+                    } catch (e) {
+                        console.error('Error processing SVG:', e);
+                    }
+                }
+
+                svgContent += `</svg>`;
+
+                const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `panel-figure-${new Date().getTime()}.svg`;
+                link.click();
+            }
+        }
+
+        // Initialize
+        window.tool = new PanelFigureTool();
+    </script>
+</body>
+</html>
